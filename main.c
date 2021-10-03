@@ -209,76 +209,7 @@ int main()
 {
     char buffer[1024];
 
-#if 0
-    spherical_d_t s;
-    vec_3dd_t init_v = {0.5, 0.5, sqrt(2.0)/2.0};
-    vec_3dd_t init_v2 = {sqrt(2.0)/2.0, sqrt(2.0)/2.0, 0.0};
-
-    // print original
-    vec_3dd_t v = init_v;
-    // print vector
-    vec_3dd_to_str(&v, buffer, sizeof(buffer));
-    printf("original:                 %s, ", buffer);
-    // print spherical
-    s = cartesian_to_spherical(&v);
-    s.lat = rad2deg(s.lat);
-    s.lon = rad2deg(s.lon);
-    spherical_d_to_str(&s, buffer, sizeof(buffer));
-    printf("%s\n", buffer);
-
-    // print original after being rotated 90 deg on Z-axis
-    v = rotate_3dd_z(&init_v, M_PI/2); // rotate 90 deg on Z-axis
-    // print vector
-    vec_3dd_to_str(&v, buffer, sizeof(buffer));
-    printf("rotated 90 deg on Z-axis: %s, ", buffer);
-    // print spherical
-    s = cartesian_to_spherical(&v);
-    s.lat = rad2deg(s.lat);
-    s.lon = rad2deg(s.lon);
-    spherical_d_to_str(&s, buffer, sizeof(buffer));
-    printf("%s\n", buffer);
-
-    // print original v2
-    v = init_v2;
-    // print vector
-    vec_3dd_to_str(&v, buffer, sizeof(buffer));
-    printf("original v2:              %s, ", buffer);
-    // print spherical
-    s = cartesian_to_spherical(&v);
-    s.lat = rad2deg(s.lat);
-    s.lon = rad2deg(s.lon);
-    spherical_d_to_str(&s, buffer, sizeof(buffer));
-    printf("%s\n", buffer);
-
-    // print original v2 after being rotated 90 deg on Y-axis
-    v = rotate_3dd_y(&init_v2, deg2rad(90.0)); // rotate 90 deg on Y-axis
-    // print vector
-    vec_3dd_to_str(&v, buffer, sizeof(buffer));
-    printf("rotated 90 deg on Y-axis: %s, ", buffer);
-    // print spherical
-    s = cartesian_to_spherical(&v);
-    s.lat = rad2deg(s.lat);
-    s.lon = rad2deg(s.lon);
-    spherical_d_to_str(&s, buffer, sizeof(buffer));
-    printf("%s\n", buffer);
-
-    // print original v2 after being rotated 90 deg on Y-axis
-    v = rotate_3dd_x(&init_v2, M_PI/2); // rotate 90 deg on X-axis
-    // print vector
-    vec_3dd_to_str(&v, buffer, sizeof(buffer));
-    printf("rotated 90 deg on X-axis: %s, ", buffer);
-    // print spherical
-    s = cartesian_to_spherical(&v);
-    s.lat = rad2deg(s.lat);
-    s.lon = rad2deg(s.lon);
-    spherical_d_to_str(&s, buffer, sizeof(buffer));
-    printf("%s\n", buffer);
-#endif
-
     // resource: https://sunrise-sunset.org/us/austin-tx
-
-    // TODO: get sun position from time
-    // TODO: get me position from time
 
     //for (int i = -3; i < 10 ; i++) {
     for (int i = 0; i < 14*4 ; i++) {
@@ -297,8 +228,7 @@ int main()
         sun.lat = deg2rad(sun.lat);
         sun.lon = deg2rad(sun.lon);
 
-        spherical_d_t me  = { .lat = deg2rad(30.0), .lon = deg2rad(263) };
-        //spherical_d_t me  = { .lat = deg2rad(0.0), .lon = deg2rad(0.0) };
+        spherical_d_t me  = { .lat = deg2rad(30.0), .lon = deg2rad(263) }; // Austin, TX
         spherical_alt_az_d_t x = alt_az_of_one_point_from_another(me, sun);
         spherical_alt_az_d_to_str(&x, buffer, sizeof(buffer));
         printf("%s\n", buffer);
