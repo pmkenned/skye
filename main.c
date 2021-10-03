@@ -210,6 +210,7 @@ int main()
     char buffer[1024];
 
     // resource: https://sunrise-sunset.org/us/austin-tx
+    // resource: https://sun-direction.com/
 
     //for (int i = -3; i < 10 ; i++) {
     for (int i = 0; i < 14*4 ; i++) {
