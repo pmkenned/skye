@@ -1,10 +1,15 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <math.h>
+#include <time.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+enum { JAN, FEB, MAR, APR, MAY, JUN, JUL, AUG, SEP, OCT, NOV, DEC };
+
+enum { RAD, DEG };
 
 typedef struct { float m[2][2];     } matrix_2x2f_t;
 typedef struct { float m[3][3];     } matrix_3x3f_t;
@@ -28,8 +33,23 @@ double deg2rad(double deg) { return deg*M_PI/180.0; }
 
 void vec_3dd_to_str(vec_3dd_t * v, char * dst, size_t n) { snprintf(dst, n, "< %f, %f, %f >", v->x, v->y, v->z); }
 
-void spherical_d_to_str(spherical_d_t * s, char * dst, size_t n) { snprintf(dst, n, "(latitude: %f, longitude: %f)", s->lat, s->lon); }
-void spherical_alt_az_d_to_str(spherical_alt_az_d_t * s, char * dst, size_t n) { snprintf(dst, n, "(altitude: %f, azimuth: %f)", s->alt, s->az); }
+void spherical_d_to_str(spherical_d_t * s, int fmt, char * dst, size_t n) {
+    double lat = s->lat, lon = s->lon;
+    if (fmt == DEG) {
+        lat = rad2deg(lat);
+        lon = rad2deg(lon);
+    }
+    snprintf(dst, n, "(latitude: %f, longitude: %f)", lat, lon);
+}
+
+void spherical_alt_az_d_to_str(spherical_alt_az_d_t * s, int fmt, char * dst, size_t n) {
+    double alt = s->alt, az = s->az;
+    if (fmt == DEG) {
+        alt = rad2deg(alt);
+        az = rad2deg(az);
+    }
+    snprintf(dst, n, "(altitude: %f, azimuth: %f)", alt, az);
+}
 
 vec_3dd_t
 spherical_to_cartesian(spherical_d_t * s)
@@ -161,42 +181,60 @@ alt_az_of_one_point_from_another(spherical_d_t p0, spherical_d_t p1)
 
     p1 = cartesian_to_spherical(&v);
     p1.lat = M_PI/2.0 - p1.lat; // horizon is 0
-    p1.lat = rad2deg(p1.lat);
-    p1.lon = 360.0 - rad2deg(p1.lon); // east is 90
-    if (p1.lon >= 360.0) // 359.999999999999900000
-        p1.lon -= 360.0;
+    //p1.lat = rad2deg(p1.lat);
+    //p1.lon = 360.0 - rad2deg(p1.lon); // east is 90
+    p1.lon = 2*M_PI - p1.lon;
+    //if (p1.lon >= 360.0) // 359.999999999999900000
+    //    p1.lon -= 360.0;
+    if (p1.lon >= 2*M_PI) // 359.999999999999900000
+        p1.lon -= 2*M_PI;
     r.alt = p1.lat;
     r.az  = p1.lon;
     return r;
 }
 
-// time: seconds since 9:37am UT on 20 March 2021
+#if 0
+static struct tm vernal_equinox_2021 = {
+    .tm_year = 2021 - 1900,
+    .tm_mon = MAR,
+    .tm_mday = 20,
+    .tm_hour = 9,
+    .tm_min = 37,
+    .tm_sec = 0,
+    .tm_isdst = -1
+};
+#endif
+
+time_t vernal_equinox_2021_time_t = 1616251020; // mktime(&vernal_equinox_2021);
+
 // returns coordinates in celestial sphere
 spherical_d_t
-sun_celestial_coordinate_at_time(int time)
+sun_celestial_coordinate_at_time(time_t t)
 {
-    double time_years = ((double)time)/(60*60*24*365);
+    double dt = difftime(t, vernal_equinox_2021_time_t);
+    double dt_years = dt/(60*60*24*365);
     // TODO: the equations below assume a circular orbit
     spherical_d_t r = {
-        .lat = 23.4 * sin(time_years*2*M_PI),
-        .lon = deg2rad(time_years*360.0)
+        .lat = deg2rad(23.4) * sin(dt_years*2*M_PI),
+        .lon = deg2rad(dt_years*360.0)
     };
     return r;
 }
 
-// time: seconds since 9:37am UT on 20 March 2021
 // returns coordinates in geographic coordinate system
 spherical_d_t
-sun_geographic_coordinate_at_time(int time)
+sun_geographic_coordinate_at_time(time_t t)
 {
+    double dt = difftime(t, vernal_equinox_2021_time_t);
+
     double init_lon = deg2rad((360*(12.0 - (9+37.0/60.0))/24.0));
-    double days = ((double)time)/(60*60*24);
-    double years = ((double)days)/(365);
+    double dt_days = dt/(60*60*24);
+    double dt_years = dt_days/365;
     // TODO: the equations below assume a circular orbit
     spherical_d_t r = {
-        .lat = deg2rad(23.4) * sin(years*2*M_PI),
-        //.lon = init_lon - deg2rad(days*(360.0 - 360.0/365.0))
-        .lon = init_lon - deg2rad(days*360.0)
+        .lat = deg2rad(23.4) * sin(dt_years*2*M_PI),
+        //.lon = init_lon - deg2rad(dt_days*(360.0 - 360.0/365.0))
+        .lon = init_lon - deg2rad(dt_days*360.0)
     };
     while (r.lon < 0)
         r.lon += 2*M_PI;
@@ -205,6 +243,16 @@ sun_geographic_coordinate_at_time(int time)
     return r;
 }
 
+#if 0
+time_t      time(time_t *);
+char *      ctime(const time_t *);
+char *      asctime(const struct tm *);
+double      difftime(time_t, time_t);
+time_t      mktime(struct tm *);
+struct tm * localtime(const time_t *);
+struct tm * gmtime(const time_t *);
+#endif
+
 int main()
 {
     char buffer[1024];
@@ -212,26 +260,32 @@ int main()
     // resource: https://sunrise-sunset.org/us/austin-tx
     // resource: https://sun-direction.com/
 
+    time_t curr_time;
+    //struct tm * timeinfo;
+
+    time(&curr_time);
+    //timeinfo = localtime(&curr_time);
+    printf("Current local time and date: %s", ctime(&curr_time));
+    //curr_time += 5*60*60; // TODO: depends on time zone
+    printf("Current UTC time and date: %s", asctime(gmtime(&curr_time)));
+
     //for (int i = -3; i < 10 ; i++) {
     for (int i = 0; i < 14*4 ; i++) {
         // TODO: convert date and time to seconds since time 0
-        spherical_d_t sun = sun_geographic_coordinate_at_time((197*24*60*60) + (((11-9)*60)+i*15-37)*60);
+        spherical_d_t sun = sun_geographic_coordinate_at_time(curr_time + i*15*60);
+        //spherical_d_t sun = sun_geographic_coordinate_at_time((197*24*60*60) + (((11-9)*60)+i*15-37)*60);
         //spherical_d_t sun = sun_geographic_coordinate_at_time(197*24*60*60);
         //spherical_d_t sun = sun_geographic_coordinate_at_time(i*60*60);
-        sun.lat = rad2deg(sun.lat);
-        sun.lon = rad2deg(sun.lon);
-        spherical_d_to_str(&sun, buffer, sizeof(buffer));
+        spherical_d_to_str(&sun, DEG, buffer, sizeof(buffer));
         int hr = 6 + i*15/60;
         if (hr > 12)
             hr -= 12;
         int min = (i*15)%60;
         printf("time: %d:%02d sun position:\t%s\t", hr, min, buffer);
-        sun.lat = deg2rad(sun.lat);
-        sun.lon = deg2rad(sun.lon);
 
         spherical_d_t me  = { .lat = deg2rad(30.0), .lon = deg2rad(263) }; // Austin, TX
         spherical_alt_az_d_t x = alt_az_of_one_point_from_another(me, sun);
-        spherical_alt_az_d_to_str(&x, buffer, sizeof(buffer));
+        spherical_alt_az_d_to_str(&x, DEG, buffer, sizeof(buffer));
         printf("%s\n", buffer);
     }
 
